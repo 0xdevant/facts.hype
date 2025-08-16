@@ -1,0 +1,17 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+via_ir = true
+fs_permissions = [
+  { access = "write", path = "./deployments" },
+]
+optimizer_runs = 0
+bytecode_hash = "none"
+optimizer = true
+
+[rpc_endpoints]
+hyperEvmTestnet = "${HYPEREVM_TESTNET_RPC}"
+hyperEvmMainnet = "${HYPEREVM_MAINNET_RPC}"
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
