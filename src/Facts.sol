@@ -29,11 +29,6 @@ contract Facts is Ownable, IFacts {
 
     Config public config;
 
-    /// @notice Send native token directly to this contract to deposit
-    receive() external payable {
-        deposit();
-    }
-
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -261,7 +256,7 @@ contract Facts is Ownable, IFacts {
         } else {
             // NOTE: no matter challengeSucceeded is true or false, the result can still be overridden by the council
             // only bounty amount > 0 will involve challenge so daoFee != 0 means DAO already called settle
-            if (question.slotData.challenged && platformFees[questionId].daoFee == 0) {
+            if (question.slotData.challenged && platformFees[questionId].daoFee == 0 && !question.slotData.overridden) {
                 // only require to within settle period if challenge is involved
                 require(isWithinSettlePeriod(questionId), IFacts.NotInSettlePeriod());
                 require(isDAO(msg.sender), IFacts.OnlyDAO());
@@ -272,8 +267,30 @@ contract Facts is Ownable, IFacts {
                 require(afterChallengePeriod(questionId), IFacts.OnlyAfterChallengePeriod());
 
                 _settleByUser(questionId, mostVouchedAnsId);
+            } else {
+                revert IFacts.AlreadySettledByDAO();
             }
         }
+    }
+
+    function overrideSettlement(uint256 questionId, uint16 answerId) external {
+        require(msg.sender == COUNCIL, IFacts.OnlyCouncil());
+        // storage pointer to save gas on reading only certain variables
+        Question storage question = questions[questionId];
+        require(isWithinReviewPeriod(questionId), IFacts.NotInReviewPeriod());
+        // there exists no scenario where within review period challenged & finalized can both be true so no need to check finalized
+        require(question.slotData.challenged, IFacts.NotChallenged());
+
+        // return all fees back to hunter and voucher
+        platformFees[questionId].protocolFee = 0;
+        platformFees[questionId].daoFee = 0;
+
+        questions[questionId].slotData.answerId = answerId;
+        // must be the opposite of the original challenge result
+        question.slotData.challengeSucceeded = !question.slotData.challengeSucceeded;
+        question.slotData.overridden = true;
+
+        emit Overridden(questionId, answerId);
     }
 
     /// @dev Only callable when a question is being challenged
@@ -299,26 +316,6 @@ contract Facts is Ownable, IFacts {
     /*//////////////////////////////////////////////////////////////
                                  ADMIN
     //////////////////////////////////////////////////////////////*/
-    function overrideSettlement(uint256 questionId, uint16 answerId) external {
-        require(msg.sender == COUNCIL, IFacts.OnlyCouncil());
-        // storage pointer to save gas on reading only certain variables
-        Question storage question = questions[questionId];
-        require(isWithinReviewPeriod(questionId), IFacts.NotInReviewPeriod());
-        require(question.slotData.challenged, IFacts.NotChallenged());
-        require(!question.slotData.finalized, IFacts.AlreadyFinalized());
-
-        // return all fees back to hunter and voucher
-        platformFees[questionId].protocolFee = 0;
-        platformFees[questionId].daoFee = 0;
-
-        questions[questionId].slotData.answerId = answerId;
-        // must be the opposite of the original challenge result
-        question.slotData.challengeSucceeded = !question.slotData.challengeSucceeded;
-        question.slotData.overridden = true;
-
-        emit Overridden(questionId, answerId);
-    }
-
     /// @notice Claim platform fees for a list of questions
     /// @param questionIds The ids of the questions
     /// @param recipient The address to receive the platform fees
@@ -332,8 +329,8 @@ contract Facts is Ownable, IFacts {
     function setSystemConfig(SystemConfig memory systemConfig) external onlyOwner {
         require(
             systemConfig.requiredStakeToHunt != 0 && systemConfig.requiredStakeForDAO != 0
-                && systemConfig.challengeDeposit != 0 && systemConfig.minVouched != 0 && systemConfig.challengePeriod != 0
-                && systemConfig.settlePeriod != 0 && systemConfig.reviewPeriod != 0,
+                && systemConfig.challengeDeposit != 0 && systemConfig.minVouched != 0 && systemConfig.huntPeriod != 0
+                && systemConfig.challengePeriod != 0 && systemConfig.settlePeriod != 0 && systemConfig.reviewPeriod != 0,
             IFacts.InvalidConfig()
         );
 
@@ -353,7 +350,9 @@ contract Facts is Ownable, IFacts {
     function setChallengeConfig(ChallengeConfig memory challengeConfig) external onlyOwner {
         require(
             challengeConfig.slashHunterBP <= _BASIS_POINTS && challengeConfig.slashVoucherBP <= _BASIS_POINTS
-                && challengeConfig.slashDaoBP <= _BASIS_POINTS && challengeConfig.daoOpFeeBP <= _BASIS_POINTS,
+                && challengeConfig.slashDaoBP <= _BASIS_POINTS && challengeConfig.daoOpFeeBP <= _BASIS_POINTS
+                && challengeConfig.slashHunterBP != 0 && challengeConfig.slashVoucherBP != 0
+                && challengeConfig.slashDaoBP != 0 && challengeConfig.daoOpFeeBP != 0,
             IFacts.InvalidConfig()
         );
 

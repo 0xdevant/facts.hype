@@ -93,28 +93,19 @@ contract BaseTest is Test {
     }
 
     modifier askedAndSubmittedAndVouched() {
-        _askBinaryQuestion(asker);
-        _warpToHuntPeriod();
-        _becomeHunter(hunter0);
-        _becomeHunter(hunter1);
-        // submit "yes"
-        _submit(hunter0, 0, true);
-        // submit "no"
-        _submit(hunter1, 0, false);
-        // vouch for "yes"
-        _vouch(voucher, 0, 0);
+        _askedAndSubmittedAndVouched();
+        _;
+    }
+
+    modifier settleWithoutChallenge() {
+        _askedAndSubmittedAndVouched();
+        _warpToSettlePeriod();
+        facts.settle(0, 0, false);
         _;
     }
 
     modifier settleWithChallenge() {
-        _askBinaryQuestion(asker);
-        _warpToHuntPeriod();
-        _becomeHunter(hunter0);
-        _becomeHunter(hunter1);
-        _submit(hunter0, 0, true);
-        _submit(hunter1, 0, false);
-        _vouch(voucher, 0, 0);
-
+        _askedAndSubmittedAndVouched();
         _warpToChallengePeriod();
         // challenge yes answer with no
         _challenge(challenger, 0, abi.encode(uint256(0)));
@@ -123,6 +114,21 @@ contract BaseTest is Test {
         _becomeDAO();
         facts.settle(0, 2, true);
         _;
+    }
+
+    function _askedAndSubmittedAndVouched() internal {
+        _askBinaryQuestion(asker);
+        _warpToHuntPeriod();
+        _becomeHunter(hunter0);
+        _becomeHunter(hunter1);
+        // submit "yes"
+        _submit(hunter0, 0, true);
+        // submit "no"
+        _submit(hunter1, 0, false);
+        // vouch for "yes" with 2 * DEFAULT_MIN_VOUCHED
+        _vouch(voucher, 0, 0, Constants.DEFAULT_MIN_VOUCHED);
+        // vouch for "no" with DEFAULT_MIN_VOUCHED
+        _vouch(voucher, 0, 1, 0);
     }
 
     function _askBinaryQuestion(address seeker) internal {
@@ -151,16 +157,15 @@ contract BaseTest is Test {
         answerId = facts.submit(questionId, abi.encode(uint256(isYes ? 1 : 0)));
     }
 
-    function _vouch(address user, uint256 questionId, uint16 answerId) internal {
+    function _vouch(address user, uint256 questionId, uint16 answerId, uint256 extraAmount) internal {
         vm.prank(user);
-        facts.vouch{value: Constants.DEFAULT_MIN_VOUCHED}(questionId, answerId);
+        facts.vouch{value: Constants.DEFAULT_MIN_VOUCHED + extraAmount}(questionId, answerId);
     }
 
     function _challenge(address user, uint256 questionId, bytes memory encodedAnswer)
         internal
         returns (uint16 answerId)
     {
-        _becomeHunter(user);
         vm.prank(user);
         answerId = facts.challenge{value: Constants.DEFAULT_CHALLENGE_DEPOSIT}(questionId, encodedAnswer);
     }
@@ -170,24 +175,30 @@ contract BaseTest is Test {
     }
 
     function _warpToChallengePeriod() internal {
-        vm.warp(Constants.HUNT_START + Constants.DEFAULT_HUNT_PERIOD);
+        vm.warp(Constants.CHALLENGE_START);
     }
 
     function _warpToSettlePeriod() internal {
-        vm.warp(Constants.HUNT_START + Constants.DEFAULT_HUNT_PERIOD + Constants.DEFAULT_CHALLENGE_PERIOD);
+        vm.warp(Constants.SETTLE_START);
     }
 
     function _warpToReviewPeriod() internal {
-        vm.warp(
-            Constants.HUNT_START + Constants.DEFAULT_HUNT_PERIOD + Constants.DEFAULT_CHALLENGE_PERIOD
-                + Constants.DEFAULT_SETTLE_PERIOD
-        );
+        vm.warp(Constants.REVIEW_START);
+    }
+
+    function _warpToAfterHuntPeriod() internal {
+        vm.warp(Constants.HUNT_START + Constants.DEFAULT_HUNT_PERIOD + 1);
+    }
+
+    function _warpToAfterChallengePeriod() internal {
+        vm.warp(Constants.CHALLENGE_START + Constants.DEFAULT_CHALLENGE_PERIOD + 1);
+    }
+
+    function _warpToAfterSettlePeriod() internal {
+        vm.warp(Constants.SETTLE_START + Constants.DEFAULT_SETTLE_PERIOD + 1);
     }
 
     function _warpToAfterReviewPeriod() internal {
-        vm.warp(
-            Constants.HUNT_START + Constants.DEFAULT_HUNT_PERIOD + Constants.DEFAULT_CHALLENGE_PERIOD
-                + Constants.DEFAULT_SETTLE_PERIOD + Constants.DEFAULT_REVIEW_PERIOD + 1
-        );
+        vm.warp(Constants.REVIEW_START + Constants.DEFAULT_REVIEW_PERIOD + 1);
     }
 }

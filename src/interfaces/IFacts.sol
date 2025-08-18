@@ -11,6 +11,7 @@ interface IFacts {
     error NotChallenged();
     error NotFinalized();
     error AlreadyFinalized();
+    error AlreadySettledByDAO();
     error NotHunter();
     error EmptyOrRedeemedVouched();
     error NotInHuntPeriod();

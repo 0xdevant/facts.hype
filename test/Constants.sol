@@ -6,6 +6,10 @@ library Constants {
 
     // test configs
     uint256 constant HUNT_START = 2;
+    uint256 constant CHALLENGE_START = HUNT_START + DEFAULT_HUNT_PERIOD;
+    uint256 constant SETTLE_START = CHALLENGE_START + DEFAULT_CHALLENGE_PERIOD;
+    uint256 constant REVIEW_START = SETTLE_START + DEFAULT_SETTLE_PERIOD;
+
     uint256 constant DEFAULT_REQUIRED_STAKE_TO_HUNT = 1e18;
     uint256 constant DEFAULT_REQUIRED_STAKE_FOR_DAO = 1000e18;
     uint256 constant DEFAULT_CHALLENGE_DEPOSIT = 100e18;
@@ -37,8 +41,8 @@ library Constants {
     uint256 constant TESTNET_CHALLENGE_DEPOSIT = 1e18;
     uint128 constant TESTNET_MIN_VOUCHED = 0.001e18;
 
-    uint256 constant TESTNET_HUNT_PERIOD = 5 minutes;
-    uint256 constant TESTNET_CHALLENGE_PERIOD = 5 minutes;
-    uint256 constant TESTNET_SETTLE_PERIOD = 5 minutes;
-    uint256 constant TESTNET_REVIEW_PERIOD = 5 minutes;
+    uint256 constant TESTNET_HUNT_PERIOD = 15 minutes;
+    uint256 constant TESTNET_CHALLENGE_PERIOD = 15 minutes;
+    uint256 constant TESTNET_SETTLE_PERIOD = 15 minutes;
+    uint256 constant TESTNET_REVIEW_PERIOD = 15 minutes;
 }
