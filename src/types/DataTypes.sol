@@ -10,6 +10,14 @@ struct Question {
     SlotData slotData;
 }
 
+/// @param startHuntAt The start time of the hunt period
+/// @param endHuntAt The end time of the hunt period
+/// @param answerId The id of the answer
+/// @param overthrownAnswerId The answer id overthrown by Council if settlement is overridden
+/// @param challenged Whether the question is challenged
+/// @param challengeSucceeded Whether the challenge is successful
+/// @param overridden Whether the settlement is overridden by Council
+/// @param finalized Whether the question is finalized
 struct SlotData {
     // fit in one slot
     uint96 startHuntAt;
@@ -23,13 +31,17 @@ struct SlotData {
 }
 
 /// @dev Could be extended to include more types in future upgrades
-/// @dev No strict formatting on the answer except for binary which checks for yes/no
+/// @dev No strict formatting on the answer except for binary and number
 enum QuestionType {
     Binary,
     Number,
     OpenEnded
 }
 
+/// @param hunter The hunter of the answer
+/// @param encodedAnswer To be decoded by the question type
+/// @param byChallenger Whether the answer is coming from a challenger
+/// @param totalVouched The total amount vouched for the answer
 struct Answer {
     address hunter;
     bytes encodedAnswer;
@@ -37,23 +49,32 @@ struct Answer {
     uint248 totalVouched;
 }
 
+/// @param deposited The total amount deposited by the user
+/// @param engagingQIds The ids of questions the user is engaging in
+/// @param qidToResult The result of reward and principal for each question for the user
 struct UserData {
     uint256 deposited;
     uint256[] engagingQIds;
     mapping(uint256 questionId => Result result) qidToResult;
 }
 
+/// @param hunterClaimable The bounty claimable as hunter for the question
+/// @param ansIdToVouch Vouch data for an answer
 struct Result {
     uint256 hunterClaimable;
     mapping(uint16 answerId => Vouch vouch) ansIdToVouch;
 }
 
+/// @param vouched The amount vouched for an answer
+/// @param claimed Whether the voucher has claimed the bounty distributed for that answer
 struct Vouch {
     uint248 vouched;
     bool claimed;
 }
 
 // since bounty amount can go beyond 128 bits, use 256 bits to store the fees
+/// @param protocolFee If challenge successful get half of bounty, or share bounty by protocolBP if no challenge
+/// @param daoFee If challenge successful get half of bounty, otherwise get operation fee by daoOpFeeBP
 struct Fees {
     uint256 protocolFee;
     uint256 daoFee;
@@ -84,12 +105,19 @@ struct SystemConfig {
     uint64 reviewPeriod;
 }
 
+/// @param hunterBP The bounty distribution percentage for hunter in basis points
+/// @param voucherBP The bounty distribution percentage for voucher in basis points
+/// @param protocolBP The bounty distribution percentage for protocol in basis points
 struct BountyDistributionConfig {
     uint64 hunterBP;
     uint64 voucherBP;
     uint64 protocolBP;
 }
 
+/// @param slashHunterBP The slash percentage for hunter in basis points
+/// @param slashVoucherBP The slash percentage for voucher in basis points
+/// @param slashDaoBP The slash percentage for DAO in basis points
+/// @param daoOpFeeBP The operation fee for DAO in basis points
 struct ChallengeConfig {
     uint64 slashHunterBP;
     uint64 slashVoucherBP;

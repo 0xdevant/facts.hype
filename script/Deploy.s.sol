@@ -8,20 +8,19 @@ import "../src/types/DataTypes.sol";
 
 import {Constants} from "../test/Constants.sol";
 
-struct ScriptData {
-    string explorerUrl;
-    address protocolFeeReceiver;
-    address council;
-}
-
 abstract contract DeployScript is Script {
+    struct ScriptData {
+        bool isTestnet;
+        string explorerUrl;
+        address protocolFeeReceiver;
+        address council;
+    }
+
     ScriptData public scriptData;
 
     function setUp() public virtual {}
 
     function run() public {
-        Config memory config = _getConfig(vm.envBool("IS_PRODUCTION"));
-
         require(scriptData.protocolFeeReceiver != address(0), "protocolFeeReceiver is not set");
         require(scriptData.council != address(0), "council is not set");
 
@@ -29,7 +28,7 @@ abstract contract DeployScript is Script {
 
         vm.startBroadcast();
 
-        Facts facts = new Facts(config, scriptData.protocolFeeReceiver, scriptData.council);
+        Facts facts = new Facts(_getConfig(scriptData.isTestnet), scriptData.protocolFeeReceiver, scriptData.council);
 
         vm.stopBroadcast();
 
@@ -48,23 +47,21 @@ abstract contract DeployScript is Script {
         vm.writeFile(string.concat("deployments/", vm.toString(block.chainid), ".md"), log);
     }
 
-    function _getConfig(bool isProduction) internal pure returns (Config memory) {
+    function _getConfig(bool isTestnet) internal pure returns (Config memory) {
         return Config({
             systemConfig: SystemConfig({
                 requiredStakeToHunt: uint128(
-                    isProduction ? Constants.DEFAULT_REQUIRED_STAKE_TO_HUNT : Constants.TESTNET_REQUIRED_STAKE_TO_HUNT
+                    isTestnet ? Constants.TESTNET_REQUIRED_STAKE_TO_HUNT : Constants.DEFAULT_REQUIRED_STAKE_TO_HUNT
                 ),
                 requiredStakeForDAO: uint128(
-                    isProduction ? Constants.DEFAULT_REQUIRED_STAKE_FOR_DAO : Constants.TESTNET_REQUIRED_STAKE_FOR_DAO
+                    isTestnet ? Constants.TESTNET_REQUIRED_STAKE_FOR_DAO : Constants.DEFAULT_REQUIRED_STAKE_FOR_DAO
                 ),
-                challengeDeposit: uint128(
-                    isProduction ? Constants.DEFAULT_CHALLENGE_DEPOSIT : Constants.TESTNET_CHALLENGE_DEPOSIT
-                ),
-                minVouched: uint128(isProduction ? Constants.DEFAULT_MIN_VOUCHED : Constants.TESTNET_MIN_VOUCHED),
-                huntPeriod: uint64(isProduction ? Constants.DEFAULT_HUNT_PERIOD : Constants.TESTNET_HUNT_PERIOD),
-                challengePeriod: uint64(isProduction ? Constants.DEFAULT_CHALLENGE_PERIOD : Constants.TESTNET_CHALLENGE_PERIOD),
-                settlePeriod: uint64(isProduction ? Constants.DEFAULT_SETTLE_PERIOD : Constants.TESTNET_SETTLE_PERIOD),
-                reviewPeriod: uint64(isProduction ? Constants.DEFAULT_REVIEW_PERIOD : Constants.TESTNET_REVIEW_PERIOD)
+                challengeDeposit: uint128(isTestnet ? Constants.TESTNET_CHALLENGE_DEPOSIT : Constants.DEFAULT_CHALLENGE_DEPOSIT),
+                minVouched: uint128(isTestnet ? Constants.TESTNET_MIN_VOUCHED : Constants.DEFAULT_MIN_VOUCHED),
+                huntPeriod: uint64(isTestnet ? Constants.TESTNET_HUNT_PERIOD : Constants.DEFAULT_HUNT_PERIOD),
+                challengePeriod: uint64(isTestnet ? Constants.TESTNET_CHALLENGE_PERIOD : Constants.DEFAULT_CHALLENGE_PERIOD),
+                settlePeriod: uint64(isTestnet ? Constants.TESTNET_SETTLE_PERIOD : Constants.DEFAULT_SETTLE_PERIOD),
+                reviewPeriod: uint64(isTestnet ? Constants.TESTNET_REVIEW_PERIOD : Constants.DEFAULT_REVIEW_PERIOD)
             }),
             distributionConfig: BountyDistributionConfig({
                 hunterBP: uint64(Constants.DEFAULT_HUNTER_BP),

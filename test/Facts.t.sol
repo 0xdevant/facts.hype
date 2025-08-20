@@ -82,7 +82,7 @@ contract FactsTest is BaseTest {
     }
 
     function test_submit_RevertWhenNotHunter() public asked {
-        vm.expectRevert(IFacts.NotHunter.selector);
+        vm.expectRevert(IFacts.OnlyHunter.selector);
         facts.submit(0, abi.encode(uint256(1)));
     }
 

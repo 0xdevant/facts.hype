@@ -93,7 +93,7 @@ contract Facts is Ownable, IFacts {
     function submit(uint256 questionId, bytes calldata encodedAnswer) external returns (uint16 answerId) {
         Question memory question = questions[questionId];
         require(isWithinHuntPeriod(questionId), IFacts.NotInHuntPeriod());
-        require(isHunter(msg.sender), IFacts.NotHunter());
+        require(isHunter(msg.sender), IFacts.OnlyHunter());
         require(
             _isValidAnswerFormat(question.questionType, encodedAnswer),
             IFacts.InvalidAnswerFormat(question.questionType)
@@ -129,6 +129,8 @@ contract Facts is Ownable, IFacts {
                           REWARD RELATED LOGIC
     //////////////////////////////////////////////////////////////*/
     /// @notice Claim the bounty for a question
+    /// @param questionId The id of the question
+    /// @param asHunter Whether to claim as a hunter
     function claim(uint256 questionId, bool asHunter) external {
         require(questions[questionId].slotData.finalized, IFacts.NotFinalized());
 
@@ -143,7 +145,7 @@ contract Facts is Ownable, IFacts {
     /// @notice Redeem the vouched amount back from the answer that is not the final truthful answer
     /// @param questionId The id of the question
     /// @param answerId The id of the answer to redeem
-    /// @dev Voucher will be slashed if challenge is successful at last
+    /// @dev Voucher will be slashed at this point if challenge is successful
     function redeem(uint256 questionId, uint16 answerId) external {
         Question memory question = questions[questionId];
         require(question.slotData.finalized, IFacts.NotFinalized());
@@ -162,8 +164,8 @@ contract Facts is Ownable, IFacts {
     }
 
     /// @notice Deposit to become a hunter/DAO
-    /// @dev As the stake could be slashed and disqualify user from being a hunter/DAO,
-    /// thus no restriction on deposit amount to allow user to be eligible for hunter/DAO again
+    /// @dev Deposit could be slashed and disqualify user from being a hunter/DAO,
+    /// thus no restriction on deposit amount to allow user to be eligible again
     function deposit() public payable {
         usersInfo[msg.sender].deposited += msg.value;
 
@@ -273,7 +275,10 @@ contract Facts is Ownable, IFacts {
         }
     }
 
-    function overrideSettlement(uint256 questionId, uint16 answerId) external {
+    /// @notice Override the settlement result from the DAO as Council
+    /// @param questionId The id of the question
+    /// @param finalAnswerId The answer id decided to be the final winner
+    function overrideSettlement(uint256 questionId, uint16 finalAnswerId) external {
         require(msg.sender == COUNCIL, IFacts.OnlyCouncil());
         // storage pointer to save gas on reading only certain variables
         Question storage question = questions[questionId];
@@ -285,15 +290,16 @@ contract Facts is Ownable, IFacts {
         platformFees[questionId].protocolFee = 0;
         platformFees[questionId].daoFee = 0;
 
-        questions[questionId].slotData.answerId = answerId;
+        questions[questionId].slotData.answerId = finalAnswerId;
         // must be the opposite of the original challenge result
         question.slotData.challengeSucceeded = !question.slotData.challengeSucceeded;
         question.slotData.overridden = true;
 
-        emit Overridden(questionId, answerId);
+        emit Overridden(questionId, finalAnswerId);
     }
 
-    /// @dev Only callable when a question is being challenged
+    /// @notice Finalize the question to enable claiming bounty and principal and slash related parties if needed, callable by anyone
+    /// @dev Only need to be called when a question involved challenge
     function finalize(uint256 questionId) external {
         SlotData memory slotData = questions[questionId].slotData;
         require(afterReviewPeriod(questionId), IFacts.OnlyAfterReviewPeriod());
@@ -326,6 +332,9 @@ contract Facts is Ownable, IFacts {
         emit ClaimedPlatformFee(recipient);
     }
 
+    /// @notice Set the system config
+    /// @param systemConfig The system config to set
+    /// @dev Each config must be >0
     function setSystemConfig(SystemConfig memory systemConfig) external onlyOwner {
         require(
             systemConfig.requiredStakeToHunt != 0 && systemConfig.requiredStakeForDAO != 0
@@ -337,6 +346,9 @@ contract Facts is Ownable, IFacts {
         config.systemConfig = systemConfig;
     }
 
+    /// @notice Set the distribution config
+    /// @param distributionConfig The distribution config to set
+    /// @dev Each BP must add up to 100%
     function setDistributionConfig(BountyDistributionConfig memory distributionConfig) external onlyOwner {
         require(
             distributionConfig.hunterBP + distributionConfig.voucherBP + distributionConfig.protocolBP == _BASIS_POINTS,
@@ -346,7 +358,9 @@ contract Facts is Ownable, IFacts {
         config.distributionConfig = distributionConfig;
     }
 
-    /// @dev Slash BP can be set to 0 to disable slashing
+    /// @notice Set the challenge config
+    /// @param challengeConfig The challenge config to set
+    /// @dev Each BP must be <=100%
     function setChallengeConfig(ChallengeConfig memory challengeConfig) external onlyOwner {
         require(
             challengeConfig.slashHunterBP <= _BASIS_POINTS && challengeConfig.slashVoucherBP <= _BASIS_POINTS
@@ -496,10 +510,19 @@ contract Facts is Ownable, IFacts {
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
+    /// @notice Get all answers for a question
+    /// @param questionId The id of the question
+    /// @return answers The answers for the question
     function getAnswers(uint256 questionId) external view returns (Answer[] memory) {
         return qidToAnswers[questionId];
     }
 
+    /// @notice Get an answer for a question
+    /// @param questionId The id of the question
+    /// @param answerId The id of the answer
+    /// @return hunter The hunter of the answer
+    /// @return encodedAnswer The encoded answer
+    /// @return totalVouched The total vouched amount of the answer
     function getAnswer(uint256 questionId, uint16 answerId)
         external
         view
@@ -512,18 +535,33 @@ contract Facts is Ownable, IFacts {
         );
     }
 
+    /// @notice Get the number of questions
+    /// @return numOfQuestions The number of questions
     function getNumOfQuestions() external view returns (uint256) {
         return questions.length;
     }
 
+    /// @notice Get the number of answers for a question
+    /// @param questionId The id of the question
+    /// @return numOfAnswers The number of answers for the question
     function getNumOfAnswers(uint256 questionId) external view returns (uint256) {
         return qidToAnswers[questionId].length;
     }
 
+    /// @notice Get the ids of questions that the user is engaging in
+    /// @param user The address of the user
+    /// @return engagingQIds The ids of questions that the user is engaging in
     function getUserEngagingQIds(address user) external view returns (uint256[] memory) {
         return usersInfo[user].engagingQIds;
     }
 
+    /// @notice Get the result of a question for a user
+    /// @param user The address of the user
+    /// @param questionId The id of the question
+    /// @param answerId The id of the answer
+    /// @return hunterClaimable The hunter claimable amount
+    /// @return vouched The vouched amount
+    /// @return claimed Whether the answer has been claimed
     function getUserQuestionResult(address user, uint256 questionId, uint16 answerId)
         external
         view
@@ -533,7 +571,9 @@ contract Facts is Ownable, IFacts {
         return (result.hunterClaimable, result.ansIdToVouch[answerId].vouched, result.ansIdToVouch[answerId].claimed);
     }
 
-    /// @notice Find the most truthful answer with the most vouched, return id of type(uint16).max as no winner for invalid case
+    /// @notice Find the most truthful answer by checking which answer has the most vouched amount for a question
+    /// @param questionId The id of the question
+    /// @return winnerAnsId The id of the most truthful answer, type(uint16).max indicates no winner is found
     function getMostVouchedAnsId(uint256 questionId) public view returns (uint16 winnerAnsId) {
         Answer[] memory answers = qidToAnswers[questionId];
         if (answers.length == 0) {
@@ -561,41 +601,66 @@ contract Facts is Ownable, IFacts {
         }
     }
 
-    function calcVouchedClaimable(uint256 questionId, address claimer, uint16 answerId, uint256 bountyAmount)
+    /// @notice Calculate the claimable amount for a voucher
+    /// @param questionId The id of the question
+    /// @param voucher The address of the voucher
+    /// @param answerId The id of the answer
+    /// @param bountyAmount The bounty amount of the question
+    /// @return claimable The claimable amount for the voucher
+    function calcVouchedClaimable(uint256 questionId, address voucher, uint16 answerId, uint256 bountyAmount)
         public
         view
         returns (uint256 claimable)
     {
         // get vouched amount from correct answer id
-        uint256 vouched = usersInfo[claimer].qidToResult[questionId].ansIdToVouch[answerId].vouched;
+        uint256 vouched = usersInfo[voucher].qidToResult[questionId].ansIdToVouch[answerId].vouched;
         // claim by the share of own vouched amount to the total vouched amount of correct answer
         uint256 share = (vouched * _WAD) / qidToAnswers[questionId][answerId].totalVouched / _WAD;
         claimable = (bountyAmount * share * config.distributionConfig.voucherBP) / _BASIS_POINTS;
     }
 
+    /// @notice Calculate the slash amount
+    /// @param amount The total amount to slash from
+    /// @param slashBP The slash BP
+    /// @return slashAmount The slash amount
     function calcSlashAmount(uint256 amount, uint64 slashBP) public pure returns (uint256) {
         return amount * slashBP / _BASIS_POINTS;
     }
 
+    /// @notice Check if a user is a hunter
+    /// @param user The address of the user
+    /// @return isHunter Whether the user is a hunter
     function isHunter(address user) public view returns (bool) {
         return usersInfo[user].deposited >= config.systemConfig.requiredStakeToHunt;
     }
 
+    /// @notice Check if a user is a DAO
+    /// @param user The address of the user
+    /// @return isDAO Whether the user is a DAO
     function isDAO(address user) public view returns (bool) {
         return user == owner() && usersInfo[user].deposited >= config.systemConfig.requiredStakeForDAO;
     }
 
+    /// @notice Check if a question is within the hunt period
+    /// @param questionId The id of the question
+    /// @return isWithinHuntPeriod Whether the question is within the hunt period
     function isWithinHuntPeriod(uint256 questionId) public view returns (bool) {
         Question memory question = questions[questionId];
         return block.timestamp > question.slotData.startHuntAt && block.timestamp <= question.slotData.endHuntAt;
     }
 
+    /// @notice Check if a question is within the challenge period
+    /// @param questionId The id of the question
+    /// @return isWithinChallengePeriod Whether the question is within the challenge period
     function isWithinChallengePeriod(uint256 questionId) public view returns (bool) {
         Question memory question = questions[questionId];
         return block.timestamp > question.slotData.endHuntAt
             && block.timestamp <= question.slotData.endHuntAt + config.systemConfig.challengePeriod;
     }
 
+    /// @notice Check if a question is within the settle period
+    /// @param questionId The id of the question
+    /// @return isWithinSettlePeriod Whether the question is within the settle period
     function isWithinSettlePeriod(uint256 questionId) public view returns (bool) {
         Question memory question = questions[questionId];
         SystemConfig memory systemConfig = config.systemConfig;
@@ -604,6 +669,9 @@ contract Facts is Ownable, IFacts {
             && block.timestamp <= question.slotData.endHuntAt + systemConfig.challengePeriod + systemConfig.settlePeriod;
     }
 
+    /// @notice Check if a question is within the review period
+    /// @param questionId The id of the question
+    /// @return isWithinReviewPeriod Whether the question is within the review period
     function isWithinReviewPeriod(uint256 questionId) public view returns (bool) {
         Question memory question = questions[questionId];
         SystemConfig memory systemConfig = config.systemConfig;
@@ -614,16 +682,25 @@ contract Facts is Ownable, IFacts {
                     + systemConfig.reviewPeriod;
     }
 
+    /// @notice Check if a question is after the hunt period
+    /// @param questionId The id of the question
+    /// @return isAfterHuntPeriod Whether the question is after the hunt period
     function afterHuntPeriod(uint256 questionId) public view returns (bool) {
         return block.timestamp > questions[questionId].slotData.endHuntAt;
     }
 
+    /// @notice Check if a question is after the challenge period
+    /// @param questionId The id of the question
+    /// @return isAfterChallengePeriod Whether the question is after the challenge period
     function afterChallengePeriod(uint256 questionId) public view returns (bool) {
         Question memory question = questions[questionId];
         SystemConfig memory systemConfig = config.systemConfig;
         return block.timestamp > question.slotData.endHuntAt + systemConfig.challengePeriod;
     }
 
+    /// @notice Check if a question is after the review period
+    /// @param questionId The id of the question
+    /// @return isAfterReviewPeriod Whether the question is after the review period
     function afterReviewPeriod(uint256 questionId) public view returns (bool) {
         Question memory question = questions[questionId];
         SystemConfig memory systemConfig = config.systemConfig;
