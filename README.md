@@ -31,6 +31,7 @@ $ forge install
 ```
 ├── script
 │   ├── Deploy.s.sol
+│   ├── DeployMainnet.s.sol
 │   └── DeployTestnet.s.sol
 ├── src
 │   ├── Facts.sol
@@ -38,6 +39,11 @@ $ forge install
 │   │   └── IFacts.sol
 │   └── types
 │       └── DataTypes.sol
+└── test
+    ├── Constants.sol
+    ├── Facts.t.sol
+    └── shared
+        └── BaseTest.sol
 ```
 
 ## Usage
@@ -67,14 +73,18 @@ This repository serves as a open-sourced alternative to market resolution system
 
 Feel free to make a pull request.
 
-## Safety
+## Disclaimer
 
-This is **experimental software** and is provided on an "as is" and "as available" basis.
+_These smart contracts and testing suite are being provided as is. No guarantee, representation or warranty is being made, express or implied, as to the safety or correctness of anything provided herein or through related user interfaces. This repository and related code have not been audited and as such there can be no assurance anything will work as intended, and users may experience delays, failures, errors, omissions, loss of transmitted information or loss of funds. The creators are not liable for any of the foregoing. Users should proceed with caution and use at their own risk._
 
-I **do not give any warranties** and **will not be liable for any loss** incurred through any use of this codebase.
+## License
 
-Please always include your own thorough tests when using facts.hype to make sure it works correctly with your code.
+MIT. See [LICENSE](./LICENSE) for more details.
+
+## Future Improvements
+
+- Develop SDK for easy integration and avoid writing the getters in contract to minimize deployment gas cost
 
 ## Acknowledgements
 
-I haven't referenced the implementation but this idea is inspired by [reality.eth](https://github.com/RealityETH/reality-eth-monorepo) which I really appreciate its existence as an open-source project.
+The implementation is not referenced but this idea is inspired by [reality.eth](https://github.com/RealityETH/reality-eth-monorepo) which I really appreciate its existence as an open-source project.
