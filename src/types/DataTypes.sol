@@ -105,13 +105,12 @@ struct SystemConfig {
     uint64 reviewPeriod;
 }
 
+/// @dev protocolBP = BASIS_POINTS - hunterBP - voucherBP to save gas in storage
 /// @param hunterBP The bounty distribution percentage for hunter in basis points
 /// @param voucherBP The bounty distribution percentage for voucher in basis points
-/// @param protocolBP The bounty distribution percentage for protocol in basis points
 struct BountyDistributionConfig {
-    uint64 hunterBP;
-    uint64 voucherBP;
-    uint64 protocolBP;
+    uint128 hunterBP;
+    uint128 voucherBP;
 }
 
 /// @param slashHunterBP The slash percentage for hunter in basis points

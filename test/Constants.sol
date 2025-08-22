@@ -22,7 +22,7 @@ library Constants {
 
     uint256 constant DEFAULT_HUNTER_BP = 5500;
     uint256 constant DEFAULT_VOUCHER_BP = 3500;
-    uint256 constant DEFAULT_PROTOCOL_BP = 1000;
+    uint256 constant DEFAULT_PROTOCOL_BP = BASIS_POINTS - DEFAULT_HUNTER_BP - DEFAULT_VOUCHER_BP;
 
     uint256 constant DEFAULT_SLASH_HUNTER_BP = 5000;
     uint256 constant DEFAULT_SLASH_VOUCHER_BP = 3000;

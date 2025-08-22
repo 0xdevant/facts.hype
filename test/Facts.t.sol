@@ -88,17 +88,17 @@ contract FactsTest is BaseTest {
 
     function test_submit_RevertWhenInvalidAnswerFormat() public asked {
         vm.prank(hunter0);
-        vm.expectRevert(abi.encodeWithSelector(IFacts.InvalidAnswerFormat.selector, QuestionType.Binary));
+        vm.expectRevert(abi.encodeWithSelector(IFacts.InvalidAnsFormat.selector, QuestionType.Binary));
         facts.submit(0, abi.encode(uint256(3)));
     }
 
-    function test_submit_RevertWhenTooManyAnswers() public asked {
+    function test_submit_RevertWhenTooManyAns() public asked {
         vm.startPrank(hunter0);
         for (uint256 i = 0; i < 254; i++) {
             facts.submit(0, abi.encode(uint256(1)));
         }
 
-        vm.expectRevert(IFacts.TooManyAnswers.selector);
+        vm.expectRevert(IFacts.TooManyAns.selector);
         facts.submit(0, abi.encode(uint256(1)));
         vm.stopPrank();
     }
@@ -107,6 +107,10 @@ contract FactsTest is BaseTest {
         uint256 questionId = 0;
         uint16 answerId = 0;
         uint128 vouchAmount = Constants.DEFAULT_MIN_VOUCHED;
+
+        // submit another answer
+        _becomeHunter(hunter1);
+        _submit(hunter1, 0, false);
 
         vm.prank(voucher);
         vm.expectEmit();
@@ -117,6 +121,11 @@ contract FactsTest is BaseTest {
         assertEq(vouched, vouchAmount);
         (,, uint256 totalVouched) = facts.getAnswer(questionId, answerId);
         assertEq(totalVouched, vouchAmount);
+    }
+
+    function test_vouch_RevertWhenCannotVouchWhenOneAns() public askedAndSubmitted {
+        vm.expectRevert(IFacts.CannotVouchWhenOneAns.selector);
+        facts.vouch{value: Constants.DEFAULT_MIN_VOUCHED}(0, 0);
     }
 
     function test_vouch_RevertWhenNotInHuntPeriod() public askedAndSubmitted {
@@ -131,6 +140,10 @@ contract FactsTest is BaseTest {
     }
 
     function test_vouch_RevertWhenCannotVouchForSelf() public askedAndSubmitted {
+        // submit another answer
+        _becomeHunter(hunter1);
+        _submit(hunter1, 0, false);
+
         vm.prank(hunter0);
         vm.expectRevert(IFacts.CannotVouchForSelf.selector);
         facts.vouch{value: Constants.DEFAULT_MIN_VOUCHED}(0, 0);
@@ -259,9 +272,12 @@ contract FactsTest is BaseTest {
         assertEq(slotData.answerId, 0);
 
         // ensure bounty is distributed to hunter & protocol
+        // hunter gets voucher's bounty when only one answer is submitted
         (uint256 hunterClaimable,,) = facts.getUserQuestionResult(hunter0, questionId, 0);
         assertEq(
-            hunterClaimable, Constants.DEFAULT_BOUNTY_AMOUNT * Constants.DEFAULT_HUNTER_BP / Constants.BASIS_POINTS
+            hunterClaimable,
+            Constants.DEFAULT_BOUNTY_AMOUNT * (Constants.DEFAULT_HUNTER_BP + Constants.DEFAULT_VOUCHER_BP)
+                / Constants.BASIS_POINTS
         );
         (uint256 protocolFees,) = facts.getPlatformFees(questionId);
         assertEq(protocolFees, Constants.DEFAULT_BOUNTY_AMOUNT * Constants.DEFAULT_PROTOCOL_BP / Constants.BASIS_POINTS);
@@ -418,17 +434,15 @@ contract FactsTest is BaseTest {
 
     function test_setDistributionConfig() public {
         BountyDistributionConfig memory distributionConfig = BountyDistributionConfig({
-            hunterBP: uint64(Constants.DEFAULT_HUNTER_BP),
-            voucherBP: uint64(Constants.DEFAULT_VOUCHER_BP),
-            protocolBP: uint64(Constants.DEFAULT_PROTOCOL_BP)
+            hunterBP: uint128(Constants.DEFAULT_HUNTER_BP),
+            voucherBP: uint128(Constants.DEFAULT_VOUCHER_BP)
         });
         facts.setDistributionConfig(distributionConfig);
     }
 
     function test_setDistributionConfig_RevertWhenInvalidConfig() public {
-        // should add up to 10000
-        BountyDistributionConfig memory distributionConfig =
-            BountyDistributionConfig({hunterBP: 9000, voucherBP: 0, protocolBP: 0});
+        // should not add up to BASIS_POINTS
+        BountyDistributionConfig memory distributionConfig = BountyDistributionConfig({hunterBP: 8000, voucherBP: 2000});
         vm.expectRevert(IFacts.InvalidConfig.selector);
         facts.setDistributionConfig(distributionConfig);
     }

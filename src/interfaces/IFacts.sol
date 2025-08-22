@@ -5,7 +5,7 @@ import "../types/DataTypes.sol";
 
 interface IFacts {
     error InvalidConfig();
-    error InvalidAnswerFormat(QuestionType questionType);
+    error InvalidAnsFormat(QuestionType questionType);
     error InvalidStartTime();
     error NotChallenged();
     error NotFinalized();
@@ -16,18 +16,19 @@ interface IFacts {
     error NotInChallengePeriod();
     error NotInSettlePeriod();
     error NotInReviewPeriod();
+    error CannotVouchWhenOneAns();
     error CannotVouchForSelf();
     error CannotChallengeSelf();
-    error CannotChallengeSameAnswer();
+    error CannotChallengeSameAns();
     error EmptyContent();
-    error TooManyAnswers();
+    error TooManyAns();
     error InsufficientBounty();
     error InsufficientVouched();
     error InsufficientDeposit();
     error OnlyHunter();
     error OnlyCouncil();
     error OnlyDAO();
-    error OnlyOwnerOrProtocolFeeReceiver();
+    error OnlyOwnerOrFeeReceiver();
     error OnlyAfterHuntPeriod();
     error OnlyAfterChallengePeriod();
     error OnlyAfterReviewPeriod();

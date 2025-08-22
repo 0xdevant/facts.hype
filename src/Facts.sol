@@ -94,13 +94,10 @@ contract Facts is Ownable, IFacts {
         Question memory question = questions[questionId];
         require(isWithinHuntPeriod(questionId), IFacts.NotInHuntPeriod());
         require(isHunter(msg.sender), IFacts.OnlyHunter());
-        require(
-            _isValidAnswerFormat(question.questionType, encodedAnswer),
-            IFacts.InvalidAnswerFormat(question.questionType)
-        );
+        require(_isValidAnsFormat(question.questionType, encodedAnswer), IFacts.InvalidAnsFormat(question.questionType));
         answerId = uint16(qidToAnswers[questionId].length);
         // shouldn't exceed 256 answers, also leave room for challenge
-        require(answerId + 1 < type(uint8).max, IFacts.TooManyAnswers());
+        require(answerId + 1 < type(uint8).max, IFacts.TooManyAns());
         // hunter should just submit for once, but still they can
         usersInfo[msg.sender].engagingQIds.push(questionId);
         qidToAnswers[questionId].push(
@@ -116,11 +113,13 @@ contract Facts is Ownable, IFacts {
     function vouch(uint256 questionId, uint16 answerId) external payable {
         require(isWithinHuntPeriod(questionId), IFacts.NotInHuntPeriod());
         require(msg.value >= config.systemConfig.minVouched, IFacts.InsufficientVouched());
-        require(qidToAnswers[questionId][answerId].hunter != msg.sender, IFacts.CannotVouchForSelf());
+        require(qidToAnswers[questionId].length > 1, IFacts.CannotVouchWhenOneAns());
+        Answer storage answer = qidToAnswers[questionId][answerId];
+        require(answer.hunter != msg.sender, IFacts.CannotVouchForSelf());
 
         // user can keep vouching for the same answer multiple times
         usersInfo[msg.sender].qidToResult[questionId].ansIdToVouch[answerId].vouched += uint120(msg.value);
-        qidToAnswers[questionId][answerId].totalVouched += uint248(msg.value);
+        answer.totalVouched += uint248(msg.value);
 
         emit Vouched(questionId, answerId, msg.sender, msg.value);
     }
@@ -223,7 +222,7 @@ contract Facts is Ownable, IFacts {
         require(
             // checking if the number is the same applies to both binary and number question types
             abi.decode(encodedAnswer, (uint256)) != abi.decode(mostVouchedAns.encodedAnswer, (uint256)),
-            IFacts.CannotChallengeSameAnswer()
+            IFacts.CannotChallengeSameAns()
         );
         require(mostVouchedAns.hunter != msg.sender, IFacts.CannotChallengeSelf());
 
@@ -326,7 +325,7 @@ contract Facts is Ownable, IFacts {
     /// @param questionIds The ids of the questions
     /// @param recipient The address to receive the platform fees
     function claimPlatformFee(uint256[] memory questionIds, address recipient) external {
-        require(msg.sender == owner() || msg.sender == PROTOCOL_FEE_RECEIVER, IFacts.OnlyOwnerOrProtocolFeeReceiver());
+        require(msg.sender == owner() || msg.sender == PROTOCOL_FEE_RECEIVER, IFacts.OnlyOwnerOrFeeReceiver());
         _claimPlatformFee(questionIds, recipient);
 
         emit ClaimedPlatformFee(recipient);
@@ -348,12 +347,9 @@ contract Facts is Ownable, IFacts {
 
     /// @notice Set the distribution config
     /// @param distributionConfig The distribution config to set
-    /// @dev Each BP must add up to 100%
+    /// @dev protocolBP = BASIS_POINTS - hunterBP - voucherBP so hunterBP & voucherBP must add up to <100%
     function setDistributionConfig(BountyDistributionConfig memory distributionConfig) external onlyOwner {
-        require(
-            distributionConfig.hunterBP + distributionConfig.voucherBP + distributionConfig.protocolBP == _BASIS_POINTS,
-            IFacts.InvalidConfig()
-        );
+        require(distributionConfig.hunterBP + distributionConfig.voucherBP < _BASIS_POINTS, IFacts.InvalidConfig());
 
         config.distributionConfig = distributionConfig;
     }
@@ -403,13 +399,17 @@ contract Facts is Ownable, IFacts {
         question.slotData.answerId = mostVouchedAnsId;
         question.slotData.finalized = true;
 
-        // distribute bounty to hunter & protocol
         BountyDistributionConfig memory distributionConfig = config.distributionConfig;
+        // if there's only one answer no vouch will be allowed so distribute voucher bounty to hunter as well
+        uint256 hunterBP = qidToAnswers[questionId].length == 1
+            ? distributionConfig.hunterBP + distributionConfig.voucherBP
+            : distributionConfig.hunterBP;
+        // remaining goes to protocol
+        uint256 protocolBP = _BASIS_POINTS - distributionConfig.hunterBP - distributionConfig.voucherBP;
         address hunter = qidToAnswers[questionId][mostVouchedAnsId].hunter;
 
-        usersInfo[hunter].qidToResult[questionId].hunterClaimable =
-            (question.bountyAmount * distributionConfig.hunterBP) / _BASIS_POINTS;
-        platformFees[questionId].protocolFee += (question.bountyAmount * distributionConfig.protocolBP) / _BASIS_POINTS;
+        usersInfo[hunter].qidToResult[questionId].hunterClaimable = (question.bountyAmount * hunterBP) / _BASIS_POINTS;
+        platformFees[questionId].protocolFee += (question.bountyAmount * protocolBP) / _BASIS_POINTS;
     }
 
     function _slashDAOToProtocol() internal {
@@ -458,7 +458,7 @@ contract Facts is Ownable, IFacts {
         }
     }
 
-    function _isValidAnswerFormat(QuestionType questionType, bytes calldata encodedAnswer) public pure returns (bool) {
+    function _isValidAnsFormat(QuestionType questionType, bytes calldata encodedAnswer) public pure returns (bool) {
         // will cause panic if use bool so use uint instead
         if (questionType == QuestionType.Binary) {
             return abi.decode(encodedAnswer, (uint256)) == 0 || abi.decode(encodedAnswer, (uint256)) == 1;

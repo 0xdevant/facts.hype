@@ -64,9 +64,8 @@ abstract contract DeployScript is Script {
                 reviewPeriod: uint64(isTestnet ? Constants.TESTNET_REVIEW_PERIOD : Constants.DEFAULT_REVIEW_PERIOD)
             }),
             distributionConfig: BountyDistributionConfig({
-                hunterBP: uint64(Constants.DEFAULT_HUNTER_BP),
-                voucherBP: uint64(Constants.DEFAULT_VOUCHER_BP),
-                protocolBP: uint64(Constants.DEFAULT_PROTOCOL_BP)
+                hunterBP: uint128(Constants.DEFAULT_HUNTER_BP),
+                voucherBP: uint128(Constants.DEFAULT_VOUCHER_BP)
             }),
             challengeConfig: ChallengeConfig({
                 slashHunterBP: uint64(Constants.DEFAULT_SLASH_HUNTER_BP),
