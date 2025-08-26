@@ -67,23 +67,27 @@ $ forge verify-contract <deployed_contract_address> src/Facts.sol:Facts \
   --verifier-url https://sourcify.parsec.finance/verify
 ```
 
+## Future Improvements
+
+- Develop SDK for easy integration and avoid writing the getters in contract to minimize deployment gas cost
+
 ## Contributing
 
-This repository serves as a open-sourced alternative to market resolution system like UMA.
+This repository serves as an open source alternative of market resolution system like UMA on HyperLiquid.
 
 Feel free to make a pull request.
 
-## Disclaimer
+## Safety
 
-_These smart contracts and testing suite are being provided as is. No guarantee, representation or warranty is being made, express or implied, as to the safety or correctness of anything provided herein or through related user interfaces. This repository and related code have not been audited and as such there can be no assurance anything will work as intended, and users may experience delays, failures, errors, omissions, loss of transmitted information or loss of funds. The creators are not liable for any of the foregoing. Users should proceed with caution and use at their own risk._
+This software is **experimental** and is provided "as is" and "as available".
+
+**No warranties are provided** and **no liability will be accepted for any loss** incurred through the use of this codebase.
+
+Always include thorough tests when using the Euler Vault Kit to ensure it interacts correctly with your code.
 
 ## License
 
 MIT. See [LICENSE](./LICENSE) for more details.
-
-## Future Improvements
-
-- Develop SDK for easy integration and avoid writing the getters in contract to minimize deployment gas cost
 
 ## Acknowledgements
 
