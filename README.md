@@ -1,22 +1,35 @@
 ## facts.hype
 
-facts.hype is a crowd-sourced truth-seeking engine that's maximally-aligned with the HyperLiquid ecosystem.
+facts.hype is a **decentralized and actually fair market resolution system to provide crowd-sourced verification of real-world events for DApps to build on top of** i.e. an open-source alternative to UMA on HyperLiquid.
 
-Users can ask any question and attach a bounty(truth-seeker), researchers can submit their answers after depositing $HYPE into facts(hunter), others can vouch for that answer by staking $HYPE on top(voucher) - the answer with most vouches gets selected to be the “most-truthful” answer and hunter and vouchers will share the bounty.
+## How it works
 
-facts.hype introduces a challenge mechanism where after the hunting period is over, anyone can challenge the answer by paying $HYPE(or other tokens valuable enough to not make Challenge a DOS) and if it gets accepted by the DAO - part of the hunter’s stake will be slashed to challenger, part of vouchers’ stake will be slashed to the DAO.
+```bash
+# Phases
+Ask > Hunt & Vouch > Challenge > Settle > Review > Finalize
+```
 
-More importantly in order to avoid the truth being manipulated by the DAO, facts also introduces a mechanism to allow an external party i.e. the Council to override the final settlement from DAO, and slash the DAO voters’ $HYPE to prevent them being malicious.
+1. Users can ask any question and choose to attach a bounty (Truth-seeker asks)
 
-With this mechanism facts.hype can be a plug-and-play truth-seeking engine for any kinds of protocols to build on top of e.g. Prediction Market, Insurance, RWA and pretty much any protocols that require a robust, reliable and decentralized way to verify any real-world event.
+2. Others can submit different answers after depositing $HYPE to be a hunter (Hunter hunts)
 
-## Features
+3. Others can vouch for the answer they believe to be true by staking $HYPE on top (Voucher vouches)
 
-1. Ask any questions w/ or w/o a bounty
-2. Submit answer by providing reliable sources
-3. Vouch for answer by staking $HYPE on top of it
-4. Challenge the most vouched answer - slash its staked $HYPE if challenge succeeded
-5. Get your most truthful answer evaluated by the crowd, and by the DAO or Council if necessary
+4. The answer with the most vouched gets selected to be the “most-truthful” answer
+
+   > Note 1: Hunter and vouchers of the selected answer will share the bounty
+
+   > Note 2: If there is no submission, or no answer gets more vouched than the others, the result can be settled immediately and no bounty will be distributed
+
+5. Anyone can submit a challenge after the hunting period by paying $HYPE (Challenger challenges)
+
+6. If it gets accepted by the DAO - part of the hunter's stake will be slashed to challenger, part of vouchers' stake will be slashed to the DAO (DAO settles)
+
+7. In order to avoid the truth being manipulated by the DAO there is an external party in facts i.e. the Council to override DAO's decision and slash the DAO's $HYPE if needed (Council reviews)
+
+8. Anyone can then finalize the question to automatically distribute the bounty and slash related parties
+
+With such mechanism facts.hype can be a plug-and-play truth-seeking engine for any protocols that rely on verification of real-world events to build on top of e.g. Prediction Market, Insurance, RWA and pretty much any protocols that require a robust, reliable and decentralized way to verify any real-world event.
 
 ## Getting Started
 
@@ -51,7 +64,7 @@ $ forge install
 ### Test
 
 ```shell
-$ forge test
+$ forge test # >80% coverage for now
 ```
 
 ### Deploy
@@ -70,6 +83,9 @@ $ forge verify-contract <deployed_contract_address> src/Facts.sol:Facts \
 ## Future Improvements
 
 - Develop SDK for easy integration and avoid writing the getters in contract to minimize deployment gas cost
+- Gitbook on how to integrate as developers
+- Mainnet & Crosschain Deployment
+- Better UI
 
 ## Contributing
 
