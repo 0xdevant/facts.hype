@@ -64,7 +64,7 @@ $ forge install
 ### Test
 
 ```shell
-$ forge test # >80% coverage for now
+$ forge test # >85% coverage for now
 ```
 
 ### Deploy
@@ -82,6 +82,7 @@ $ forge verify-contract <deployed_contract_address> src/Facts.sol:Facts \
 
 ## Future Improvements
 
+- Support calculation on the stake required as bond when ERC20s are used other than native HYPE for bounty
 - Develop SDK for easy integration and avoid writing the getters in contract to minimize deployment gas cost
 - Gitbook on how to integrate as developers
 - Mainnet & Crosschain Deployment

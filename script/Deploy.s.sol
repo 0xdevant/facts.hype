@@ -50,14 +50,12 @@ abstract contract DeployScript is Script {
     function _getConfig(bool isTestnet) internal pure returns (Config memory) {
         return Config({
             systemConfig: SystemConfig({
-                requiredStakeToHunt: uint128(
-                    isTestnet ? Constants.TESTNET_REQUIRED_STAKE_TO_HUNT : Constants.DEFAULT_REQUIRED_STAKE_TO_HUNT
+                minStakeOfNativeBountyToHuntBP: uint128(Constants.DEFAULT_MIN_STAKE_OF_NATIVE_BOUNTY_TO_HUNT_BP),
+                minStakeToSettleAsDAO: uint128(
+                    isTestnet ? Constants.TESTNET_MIN_STAKE_TO_SETTLE_AS_DAO : Constants.DEFAULT_MIN_STAKE_TO_SETTLE_AS_DAO
                 ),
-                requiredStakeForDAO: uint128(
-                    isTestnet ? Constants.TESTNET_REQUIRED_STAKE_FOR_DAO : Constants.DEFAULT_REQUIRED_STAKE_FOR_DAO
-                ),
-                challengeDeposit: uint128(isTestnet ? Constants.TESTNET_CHALLENGE_DEPOSIT : Constants.DEFAULT_CHALLENGE_DEPOSIT),
                 minVouched: uint128(isTestnet ? Constants.TESTNET_MIN_VOUCHED : Constants.DEFAULT_MIN_VOUCHED),
+                challengeFee: uint128(isTestnet ? Constants.TESTNET_CHALLENGE_FEE : Constants.DEFAULT_CHALLENGE_FEE),
                 huntPeriod: uint64(isTestnet ? Constants.TESTNET_HUNT_PERIOD : Constants.DEFAULT_HUNT_PERIOD),
                 challengePeriod: uint64(isTestnet ? Constants.TESTNET_CHALLENGE_PERIOD : Constants.DEFAULT_CHALLENGE_PERIOD),
                 settlePeriod: uint64(isTestnet ? Constants.TESTNET_SETTLE_PERIOD : Constants.DEFAULT_SETTLE_PERIOD),

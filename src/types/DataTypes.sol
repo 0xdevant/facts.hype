@@ -2,11 +2,15 @@
 pragma solidity ^0.8.26;
 
 struct Question {
+    // 1 slot
     QuestionType questionType;
     address seeker;
+    // 1 slot
     string description;
+    // 1 slot
     address bountyToken;
-    uint256 bountyAmount;
+    uint96 bountyAmount;
+    // 1 slot
     SlotData slotData;
 }
 
@@ -49,35 +53,27 @@ struct Answer {
     uint248 totalVouched;
 }
 
-/// @param deposited The total amount deposited by the user
-/// @param engagingQIds The ids of questions the user is engaging in
-/// @param qidToResult The result of reward and principal for each question for the user
-struct UserData {
-    uint256 deposited;
-    uint256[] engagingQIds;
-    mapping(uint256 questionId => Result result) qidToResult;
-}
-
+/// @param deposited The amount deposited as a bond for the question
 /// @param hunterClaimable The bounty claimable as hunter for the question
-/// @param ansIdToVouch Vouch data for an answer
-struct Result {
-    uint256 hunterClaimable;
+/// @param ansIdToVouch Vouch data for an answer for the question
+struct UserData {
+    uint128 deposited;
+    uint128 hunterClaimable;
     mapping(uint16 answerId => Vouch vouch) ansIdToVouch;
 }
 
 /// @param vouched The amount vouched for an answer
-/// @param claimed Whether the voucher has claimed the bounty distributed for that answer
+/// @param claimed Whether the bounty distributed for vouching has been claimed
 struct Vouch {
     uint248 vouched;
     bool claimed;
 }
 
-// since bounty amount can go beyond 128 bits, use 256 bits to store the fees
 /// @param protocolFee If challenge successful get half of bounty, or share bounty by protocolBP if no challenge
 /// @param daoFee If challenge successful get half of bounty, otherwise get operation fee by daoOpFeeBP
 struct Fees {
-    uint256 protocolFee;
-    uint256 daoFee;
+    uint128 protocolFee;
+    uint128 daoFee;
 }
 
 struct Config {
@@ -86,19 +82,20 @@ struct Config {
     ChallengeConfig challengeConfig;
 }
 
-/// @param requiredStakeToHunt The minimum stake required to become a hunter
-/// @param requiredStakeForDAO The minimum stake required to settle as owner i.e. DAO
-/// @param challengeDeposit The deposit required to challenge an answer
+/// @param minStakeOfNativeBountyToHuntBP The minimum staked required relative to bounty in native token to submit answer, in basis points
+///                                       i.e. 5000 means half of bounty in native token is required to stake to submit answer
+/// @param minStakeToSettleAsDAO The minimum stake required to settle as owner i.e. DAO
 /// @param minVouched The minimum amount required to vouch for an answer
+/// @param challengeFee The fee required to submit a challenge
 /// @param huntPeriod How long is the hunt period
 /// @param challengePeriod How long is the challenge period
 /// @param settlePeriod How long is the settle period
 /// @param reviewPeriod How long is the review period
 struct SystemConfig {
-    uint128 requiredStakeForDAO;
-    uint128 challengeDeposit;
-    uint128 requiredStakeToHunt;
+    uint128 minStakeOfNativeBountyToHuntBP;
+    uint128 minStakeToSettleAsDAO;
     uint128 minVouched;
+    uint128 challengeFee;
     uint64 huntPeriod;
     uint64 challengePeriod;
     uint64 settlePeriod;
@@ -106,17 +103,17 @@ struct SystemConfig {
 }
 
 /// @dev protocolBP = BASIS_POINTS - hunterBP - voucherBP to save gas in storage
-/// @param hunterBP The bounty distribution percentage for hunter in basis points
-/// @param voucherBP The bounty distribution percentage for voucher in basis points
+/// @param hunterBP The percentage of bounty distributed to hunter, in basis points
+/// @param voucherBP The percentage of bounty distributed to voucher, in basis points
 struct BountyDistributionConfig {
     uint128 hunterBP;
     uint128 voucherBP;
 }
 
-/// @param slashHunterBP The slash percentage for hunter in basis points
-/// @param slashVoucherBP The slash percentage for voucher in basis points
-/// @param slashDaoBP The slash percentage for DAO in basis points
-/// @param daoOpFeeBP The operation fee for DAO in basis points
+/// @param slashHunterBP The percentage slashed from the hunter stake, in basis points
+/// @param slashVoucherBP The percentage slashed from the voucher stake, in basis points
+/// @param slashDaoBP The percentage slashed from the DAO stake, in basis points
+/// @param daoOpFeeBP The percentage of bounty as operation fee for DAO to review challenge, in basis points
 struct ChallengeConfig {
     uint64 slashHunterBP;
     uint64 slashVoucherBP;
